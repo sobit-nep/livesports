@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LiveSports – Streaming Webapp (Vanilla JS)</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --panel: #111318;
+      --panel-2: #171a21;
+      --text: #e9eef5;
+      --muted: #96a0b4;
+      --primary: #6ee7b7;
+      --accent: #60a5fa;
+      --danger: #ef4444;
+      --ring: rgba(110, 231, 183, .3);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box }
+    html, body { height: 100% }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(180deg, var(--bg), #0e1117);
+      color: var(--text);
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(13, 16, 22, .7);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .container { max-width: 1120px; margin: 0 auto; padding: 12px 16px }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700 }
+    .logo { width: 34px; height: 34px; display:grid; place-items:center; border-radius:12px; background: var(--primary); color:#071315 }
+
+    select, input[type="text"], button {
+      background: var(--panel); color: var(--text);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px; padding: 10px 12px; height: 40px;
+      outline: none; box-shadow: none; font-size: 14px;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--ring) }
+    button { cursor: pointer }
+    .btn { background: var(--panel-2); border-color: rgba(255,255,255,.12) }
+    .btn.primary { background: linear-gradient(180deg, #10b981, #0ea5e9); border: none; color: #071315; font-weight: 700 }
+    .btn.ghost { background: transparent; border-color: rgba(255,255,255,.12) }
+
+    .toolbar { gap: 8px }
+    .spacer { flex: 1 1 auto }
+
+    main .container { padding-top: 18px }
+
+    .meta { color: var(--muted); font-size: 14px; display:flex; align-items:center; gap:6px; margin: 6px 0 18px }
+
+    .grid { display:grid; grid-template-columns: repeat(1, minmax(0,1fr)); gap: 14px }
+    @media (min-width: 768px){ .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (min-width: 1200px){ .grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+
+    .card { background: linear-gradient(180deg, var(--panel-2), #0f131a); border: 1px solid rgba(255,255,255,.07); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden }
+    .card-header { padding: 14px 16px 8px }
+    .card-title { display:flex; justify-content: space-between; gap: 12px }
+    .title-left { min-width:0 }
+    .title-line { display:flex; align-items:center; gap:8px; font-weight: 700 }
+    .badge { font-size: 12px; background: rgba(96,165,250,.15); color: var(--accent); padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(96,165,250,.25) }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+    .sub { margin-top: 6px; color: var(--muted); display:flex; flex-wrap: wrap; gap: 8px; font-size: 12px }
+    .pill { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); padding: 4px 8px; border-radius: 999px }
+    .fav { height: 36px; width: 36px; display:grid; place-items:center; border-radius: 10px; border: 1px solid rgba(255,255,255,.12) }
+    .fav.on { background: rgba(110,231,183,.18); border-color: rgba(110,231,183,.5) }
+
+    .card-body { padding: 8px 16px 16px }
+    .channels { display:flex; flex-wrap: wrap; gap: 8px }
+    .chip { font-size: 12px; padding: 8px 10px; background: var(--panel); border: 1px solid rgba(255,255,255,.1); border-radius: 10px }
+    .muted { color: var(--muted) }
+
+    .tabs { margin-top: 12px }
+    .tab-head { display:flex; gap:8px; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 0 8px 0 }
+    .tab-btn { background: transparent; border: none; color: var(--muted); padding: 8px 2px; border-bottom: 2px solid transparent }
+    .tab-btn.active { color: var(--text); border-color: var(--primary) }
+    .tab-panel { padding-top: 10px }
+    .panel-box { border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px; background: rgba(0,0,0,.2) }
+
+    dialog::backdrop { background: rgba(0,0,0,.6) }
+    dialog { width: min(960px, 96vw); border: 1px solid rgba(255,255,255,.12); background: #000; color: #fff; border-radius: 16px; padding: 0; overflow: hidden }
+    .dialog-head { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; background: #0b0b0b; border-bottom: 1px solid rgba(255,255,255,.08) }
+    .dialog-body { aspect-ratio: 16/9; background: #000 }
+    .icon { width: 16px; height: 16px; display:inline-block; vertical-align: -2px }
+
+    .empty { text-align: center; color: var(--muted); margin: 60px 0 }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container row">
+      <div class="brand"><div class="logo">LS</div> LiveSports</div>
+
+      <select id="dateSelect"></select>
+      <select id="sportSelect"></select>
+      <input type="text" id="searchInput" placeholder="Search teams, league…" />
+      <button class="btn" id="favToggle">Show All</button>
+
+      <div class="spacer"></div>
+
+      <span class="btn" style="pointer-events:none;opacity:.7">Data: Auto</span>
+      <button class="btn" id="exportBtn">Add to Calendar</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="meta" id="meta"></div>
+      <div class="grid" id="grid"></div>
+      <div class="empty" id="empty" style="display:none">No matches found. Try another sport, date, or clear the search.</div>
+    </div>
+  </main>
+
+  <dialog id="playerModal">
+    <div class="dialog-head">
+      <strong>Live Player</strong>
+      <button class="btn ghost" id="closePlayer">Close</button>
+    </div>
+    <div class="dialog-body">
+      <iframe id="playerFrame" title="Live stream" allow="autoplay; picture-in-picture" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" style="width:100%; height:100%; border:0"></iframe>
+    </div>
+  </dialog>
+
+  <script>
+    // -------- Config & sample data --------$1const defaultData = {
+      events: {
+        "2025-10-13": [
+          { unix_timestamp: 1760302800, sport: "Football", tournament: "NWSL", match: "Angel City - Houston Dash", channels: ["https://topembed.pw/channel/ESPNDeportes[USA]","https://topembed.pw/channel/exxpl260457","https://topembed.pw/channel/exxpl238696","https://topembed.pw/channel/exxpl238699"] },
+          { unix_timestamp: 1760302800, sport: "Football", tournament: "Women's College Soccer", match: "Cal Poly - CSU Fullerton", channels: ["https://topembed.pw/channel/exxpl238698"] },
+          { unix_timestamp: 1760306400, sport: "Basketball", tournament: "NBA", match: "Orlando Magic - Miami Heat", channels: ["https://topembed.pw/channel/FanDuelSportsFlorida[USA]","https://topembed.pw/channel/exxpl11546"] },
+          { unix_timestamp: 1760310000, sport: "Football", tournament: "MLS", match: "Austin - Los Angeles FC", channels: ["https://topembed.pw/channel/exxpl93253"] },
+          { unix_timestamp: 1760314800, sport: "American Football", tournament: "NFL", match: "Kansas City Chiefs - Detroit Lions", channels: ["https://topembed.pw/channel/NBC[USA]","https://topembed.pw/channel/exxpl63407"] },
+          { unix_timestamp: 1760319000, sport: "Basketball", tournament: "NBA", match: "Los Angeles Lakers - Golden State Warriors", channels: ["https://topembed.pw/channel/exxpl11549","https://topembed.pw/channel/ex8597332"] },
+        ],
+        "2025-10-14": [
+          { unix_timestamp: 1760396400, sport: "Basketball", tournament: "NBA", match: "Indiana Pacers - San Antonio Spurs", channels: ["https://topembed.pw/channel/exxpl203714"] },
+          { unix_timestamp: 1760400000, sport: "American Football", tournament: "NFL", match: "Washington Commanders - Chicago Bears", channels: ["https://topembed.pw/channel/exxpl254251"] },
+        ],
+        "2025-10-15": [
+          { unix_timestamp: 1760486400, sport: "Football", tournament: "International Friendly", match: "Puerto Rico - Argentina", channels: ["https://topembed.pw/channel/beINSPORTSUSA[USA]"] },
+        ],
+      }
+    };
+
+    // Auto-load external data (same-origin or CORS-enabled). Optional: pass ?data=URL to override.
+    const DATA_URL = new URLSearchParams(location.search).get('data') || 'games_api.json';
+
+    async function loadData(){
+      try {
+        const res = await fetch(DATA_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        const json = await res.json();
+        if (!json.events) throw new Error("Invalid schema: missing 'events'");
+        data = json;
+      } catch (err){
+        console.warn('Failed to fetch data, falling back to embedded sample.', err);
+        data = defaultData;
+      }
+      const first = Object.keys(data.events || {})[0];
+      if (first) date = first; else date = '';
+      renderFilters();
+    }
+
+    // -------- State --------
+    let data = null;
+    let query = '';
+    let sport = 'all';
+    let date = '';
+    let onlyFavorites = false;
+
+    const favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+
+    const els = {
+      dateSelect: document.getElementById('dateSelect'),
+      sportSelect: document.getElementById('sportSelect'),
+      searchInput: document.getElementById('searchInput'),
+      favToggle: document.getElementById('favToggle'),
+      exportBtn: document.getElementById('exportBtn'),
+      meta: document.getElementById('meta'),
+      grid: document.getElementById('grid'),
+      empty: document.getElementById('empty'),
+      playerModal: document.getElementById('playerModal'),
+      playerFrame: document.getElementById('playerFrame'),
+      closePlayer: document.getElementById('closePlayer')
+    };
+
+    // -------- Utils --------
+    function toArray(d){
+      const out = [];
+      if (!d?.events) return out;
+      for (const day in d.events){
+        for (const e of d.events[day]){
+          out.push({ id: `${day}-${e.sport}-${e.match}-${e.unix_timestamp}`, date: day, ...e });
+        }
+      }
+      return out.sort((a,b)=>a.unix_timestamp - b.unix_timestamp);
+    }
+    function unique(arr){ return [...new Set(arr)]; }
+
+    function fmtKickoff(ts){
+      const dt = new Date(ts * 1000);
+      const dateStr = new Intl.DateTimeFormat('en-US', { weekday:'short', month:'short', day:'numeric', timeZone: TZ }).format(dt);
+      const timeStr = new Intl.DateTimeFormat('en-US', { hour:'numeric', minute:'2-digit', hour12:true, timeZone: TZ }).format(dt);
+      const tz = TZ.split('/')[1] || TZ; // display short tz
+      return `${dateStr} • ${timeStr} ${tz}`;
+    }
+    function timeFromNow(ts){
+      const now = Date.now();
+      const start = ts * 1000;
+      if (start <= now) return 'Live/Ended';
+      const diffMin = Math.round((start - now)/60000);
+      if (diffMin < 60) return `${diffMin}m`;
+      const h = Math.floor(diffMin / 60), m = diffMin % 60; return `${h}h ${m}m`;
+    }
+
+    function saveFavs(){ localStorage.setItem(FAV_KEY, JSON.stringify([...favorites])) }
+
+    function decodeLabel(url){
+      try {
+        const clean = decodeURIComponent(url).replace('https://topembed.pw/channel/', '').replace(/\[.*\]/g, '');
+        return clean.length > 22 ? clean.slice(0,22) + '…' : clean;
+      } catch { return 'Channel'; }
+    }
+
+    function openPlayer(url){
+      els.playerFrame.src = url;
+      els.playerModal.showModal();
+    }
+
+    // -------- Rendering --------
+    function renderFilters(){
+      const all = toArray(data);
+      const dates = unique(all.map(e=>e.date));
+      const sports = ['all', ...unique(all.map(e=>e.sport)).sort()]
+
+      // date
+      els.dateSelect.innerHTML = dates.map(d=>`<option value="${d}">${new Date(d).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}</option>`).join('');
+      if (!dates.includes(date)) date = dates[0];
+      els.dateSelect.value = date;
+
+      // sport
+      els.sportSelect.innerHTML = sports.map(s=>`<option value="${s}">${s}</option>`).join('');
+      els.sportSelect.value = sport;
+
+      // meta
+      const countDay = all.filter(e=>e.date===date).length;
+      const filtered = getFiltered(all);
+      els.meta.textContent = `Showing ${filtered.length} of ${countDay} events on ${new Date(date).toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric', year:'numeric' })} (${TZ})`;
+
+      renderGrid(filtered);
+    }
+
+    function getFiltered(all){
+      return all.filter(e => (
+        e.date === date &&
+        (sport === 'all' || e.sport === sport) &&
+        (!query || `${e.match} ${e.tournament} ${e.sport}`.toLowerCase().includes(query.toLowerCase())) &&
+        (!onlyFavorites || favorites.has(e.id))
+      ));
+    }
+
+    function renderGrid(list){
+      els.grid.innerHTML = '';
+      if (!list.length){ els.empty.style.display = 'block'; return; }
+      els.empty.style.display = 'none';
+
+      for (const e of list){
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">
+              <div class="title-left">
+                <div class="title-line">
+                  <span class="badge">${e.sport}</span>
+                  <span class="truncate" title="${e.match}">${e.match}</span>
+                </div>
+                <div class="sub">
+                  <span class="pill">${e.tournament}</span>
+                  <span>🕒 ${fmtKickoff(e.unix_timestamp)}</span>
+                  <span>Starts in ${timeFromNow(e.unix_timestamp)}</span>
+                </div>
+              </div>
+              <button class="fav ${favorites.has(e.id)?'on':''}" aria-label="Toggle favorite">${favorites.has(e.id)?'★':'☆'}</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="channels"></div>
+            ${e.channels && e.channels.length > 4 ? `<div class="muted" style="margin-top:6px">+${e.channels.length - 4} more channels available</div>`:''}
+            <div class="tabs">
+              <div class="tab-head">
+                <button class="tab-btn active" data-tab="channels">Channels</button>
+                <button class="tab-btn" data-tab="details">Details</button>
+              </div>
+              <div class="tab-panel" data-panel="channels">
+                <div class="panel-box muted">Open any source to start watching. Pop-out player supports PiP on most browsers.</div>
+                <div class="channels-all" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px"></div>
+              </div>
+              <div class="tab-panel" data-panel="details" style="display:none">
+                <div class="muted">
+                  <div><strong style="color:var(--text)">Match:</strong> ${e.match}</div>
+                  <div><strong style="color:var(--text)">League:</strong> ${e.tournament}</div>
+                  <div><strong style="color:var(--text)">Kickoff:</strong> ${fmtKickoff(e.unix_timestamp)}</div>
+                  <div><strong style="color:var(--text)">Channels:</strong> ${e.channels?.length || 0}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // quick channels
+        const chWrap = card.querySelector('.channels');
+        (e.channels||[]).slice(0,4).forEach((url)=>{
+          const btn = document.createElement('button');
+          btn.className = 'chip';
+          btn.textContent = decodeLabel(url);
+          btn.addEventListener('click', ()=> openPlayer(url));
+          chWrap.appendChild(btn);
+        });
+
+        // full tab channels
+        const chAll = card.querySelector('.channels-all');
+        (e.channels||[]).forEach((url, idx)=>{
+          const btn = document.createElement('button');
+          btn.className = 'btn'; btn.style.padding = '8px 10px'; btn.textContent = `Open #${idx+1}`;
+          btn.addEventListener('click', ()=> openPlayer(url));
+          chAll.appendChild(btn);
+        });
+
+        // tabs
+        const tabs = card.querySelectorAll('.tab-btn');
+        tabs.forEach(tb => tb.addEventListener('click', ()=>{
+          tabs.forEach(t=> t.classList.remove('active'));
+          tb.classList.add('active');
+          card.querySelectorAll('.tab-panel').forEach(p => p.style.display = p.dataset.panel === tb.dataset.tab ? 'block' : 'none');
+        }));
+
+        // favorite toggle
+        const favBtn = card.querySelector('.fav');
+        favBtn.addEventListener('click', ()=>{
+          if (favorites.has(e.id)) favorites.delete(e.id); else favorites.add(e.id);
+          saveFavs();
+          renderFilters();
+        });
+
+        els.grid.appendChild(card);
+      }
+    }
+
+    // -------- Events --------
+    els.dateSelect.addEventListener('change', (e)=>{ date = e.target.value; renderFilters(); })
+    els.sportSelect.addEventListener('change', (e)=>{ sport = e.target.value; renderFilters(); })
+    els.searchInput.addEventListener('input', (e)=>{ query = e.target.value; renderFilters(); })
+
+    els.favToggle.addEventListener('click', ()=>{
+      onlyFavorites = !onlyFavorites;
+      els.favToggle.textContent = onlyFavorites ? 'Favorites Only' : 'Show All';
+      renderFilters();
+    })
+
+        function exportICS(){
+      const list = getFiltered(toArray(data));
+      const now = new Date();
+      const lines = [ 'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//LiveSports//EN' ];
+      for (const e of list){
+        const dtstart = new Date(e.unix_timestamp*1000).toISOString().replace(/[-:]/g,'').replace('.000','');
+        const uid = (e.id.replace(/[^a-zA-Z0-9]/g, '')) + '@livesports';
+        lines.push(
+          'BEGIN:VEVENT',
+          'UID:' + uid,
+          'DTSTAMP:' + now.toISOString().replace(/[-:]/g,'').replace('.000',''),
+          'DTSTART:' + dtstart,
+          'SUMMARY:' + e.match + ' (' + e.tournament + ')',
+          'DESCRIPTION:' + 'Watch: ' + (e.channels?.[0] || 'TBA'),
+          'END:VEVENT'
+        );
+      }
+      lines.push('END:VCALENDAR');
+      const blob = new Blob([lines.join('\n')], { type: 'text/calendar' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `LiveSports_${date}.ics`; a.click();
+      URL.revokeObjectURL(url);
+    }
+    els.exportBtn.addEventListener('click', exportICS);
+
+    els.closePlayer.addEventListener('click', ()=> els.playerModal.close());
+    els.playerModal.addEventListener('close', ()=> { els.playerFrame.src = '' });
+
+    // live countdown refresh every 30s
+    setInterval(()=>{ renderFilters(); }, 30000);
+
+    // -------- Init --------
+    loadData();
+  </script>
+</body>
+</html>
