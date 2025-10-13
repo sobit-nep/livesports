@@ -149,7 +149,8 @@
     };
 
     // Auto-load external data (same-origin or CORS-enabled). Optional: pass ?data=URL to override.
-    const DATA_URL = new URLSearchParams(location.search).get('data') || 'games_api.json';
+    const DATA_URL = new URLSearchParams(location.search).get('data') || 'https://sobit-nep.github.io/livesports/index.html?data=https://sobit-nep.github.io/livesports/games_api.json';
+
 
     async function loadData(){
       const status = document.getElementById('status');
