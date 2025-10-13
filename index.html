@@ -152,22 +152,11 @@
           </select>
         </div>
         <div class="control">
-          <span class="label">View</span>
-          <select id="view">
-            <option value="grid">Grid</option>
-            <option value="timeline">Now / Next / Later</option>
-            <option value="leagues">By tournament</option>
-          </select>
-        </div>
-        <div class="control">
           <span class="label">Actions</span>
           <div class="chip-row">
             <button id="refresh" class="btn small" title="Reload JSON">↻ Refresh</button>
             <button id="share" class="btn small" title="Copy link with current filters">🔗 Share</button>
-            <button id="dlIcsFiltered" class="btn small" title="Download .ics for current list">📥 .ics (filtered)</button>
-            <button id="dlIcsFav" class="btn small" title="Download .ics for favorites">⭐ .ics (favorites)</button>
           </div>
-        </div>
         </div>
       </div>
       <div class="kpis">
@@ -204,8 +193,8 @@
   </div>
 
   <footer class="container">
-    
-    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Change to desktop site, if you're watching from mobile.</div>
+    Built for GitHub Pages • Place <code>games_api.json</code> next to this file.
+    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Do not open embed URLs directly; use the in-page player below.</div>
   </footer>
 
   <template id="cardTpl">
@@ -242,18 +231,14 @@
       // modal
       modal: document.getElementById('playerModal'), player: document.getElementById('playerFrame'), closeModal: document.getElementById('closeModal'), popout: document.getElementById('popout'), playerLabel: document.getElementById('playerLabel'),
       // ui
-      themeToggle: document.getElementById('themeToggle'),
-      view: document.getElementById('view'),
-      dlIcsFiltered: document.getElementById('dlIcsFiltered'),
-      dlIcsFav: document.getElementById('dlIcsFav')
+      themeToggle: document.getElementById('themeToggle')
     };
 
     const state = {
       raw: null, dates: [], activeDate: null, events: [], filtered: [],
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
       favorites: new Set(JSON.parse(localStorage.getItem('favorites')||'[]')),
-      notify: JSON.parse(localStorage.getItem('notify')||'false'),
-      view: localStorage.getItem('view') || 'grid'
+      notify: JSON.parse(localStorage.getItem('notify')||'false')
     };
 
     // --- Utils ---
@@ -386,7 +371,7 @@
         if(sport && ev.sport !== sport) return false;
         if(tour && ev.tournament !== tour) return false;
         if(liveOnly){
-          const now = Date.now()/1000; // live: kickoff..+3h
+          const now = Date.now()/1000; // naive live window: -10m .. +3h
           if(!(ev.unix_timestamp <= now && now <= ev.unix_timestamp + 3*3600)) return false;
         }
         return true;
@@ -404,13 +389,6 @@
     }
 
     function render(){
-      const mode = state.view;
-      if(mode==='timeline') return renderTimeline();
-      if(mode==='leagues') return renderByLeague();
-      return renderGrid();
-    }
-
-    function renderGrid(){
       const list = state.filtered;
       els.grid.innerHTML = '';
       els.empty.hidden = list.length !== 0;
@@ -426,37 +404,19 @@
         const watchBtn = node.querySelector('.watch');
         watchBtn.addEventListener('click', (e)=>{ e.preventDefault(); openPlayer(ev.channels[0], ev.match); });
         node.querySelector('.cal').href = toGCal(ev, els.tz.value || state.tz);
-        const ch = node.querySelector('.channels');
-        ch.innerHTML = ev.channels.map((u,i)=> `<a class=\"btn small ch\" href=\"#\" data-url=\"${u}\">Link ${i+1}</a>`).join('');
-        // fav + notify
-        const chRow = ch;
+        // fav + notify controls
+        const chRow = node.querySelector('.channels');
         const fav = document.createElement('button'); fav.className='btn small fav'; fav.dataset.id = id; fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite';
         fav.addEventListener('click', (e)=>{ e.preventDefault(); toggleFav(id); fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite'; });
         const bell = document.createElement('button'); bell.className='btn small'; bell.textContent='🔔 Notify'; bell.title='Remind me 5 min before kickoff (while this tab is open)';
         bell.addEventListener('click', (e)=>{ e.preventDefault(); scheduleReminder(ev); bell.textContent='✅ Scheduled'; setTimeout(()=> bell.textContent='🔔 Notify', 1500); });
         chRow.prepend(bell); chRow.prepend(fav);
+        const ch = node.querySelector('.channels');
+        ch.innerHTML = ev.channels.map((u,i)=> `<a class=\"btn small ch\" href=\"#\" data-url=\"${u}\">Link ${i+1}</a>`).join('');
         els.grid.appendChild(node);
       }
       tickCountdowns();
     }
-
-    function renderTimeline(){
-      const now = Date.now()/1000;
-      const list = state.filtered;
-      const buckets = { now: [], next: [], later: [] };
-      for(const ev of list){
-        if(ev.unix_timestamp <= now && now <= ev.unix_timestamp + 3*3600) buckets.now.push(ev);
-        else if(ev.unix_timestamp > now && ev.unix_timestamp <= now + 2*3600) buckets.next.push(ev);
-        else buckets.later.push(ev);
-      }
-      const sections = [
-        ['NOW', buckets.now], ['NEXT (≤ 2h)', buckets.next], ['LATER', buckets.later]
-      ];
-      els.grid.innerHTML = sections.map(([label, arr])=>{
-        if(arr.length===0) return '';
-        const items = arr.map(ev=>{
-          const when = fmt(ev.unix_timestamp, els.tz.value || state.tz);
-          return `<div class=\"card\"><div class=\"row\"><span class=\"badge sport\">${ev.sport}</span><span class=\"badge muted\">${e
 
     // Debounced search
     let t; els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 120); });
