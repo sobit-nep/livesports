@@ -104,7 +104,7 @@
 
       <div class="spacer"></div>
 
-      <span class="btn" style="pointer-events:none;opacity:.7">Data: Auto</span>
+      <span class="btn" id="status" title="Data source">Data: Auto</span>
       <button class="btn" id="exportBtn">Add to Calendar</button>
     </div>
   </header>
@@ -152,14 +152,17 @@
     const DATA_URL = new URLSearchParams(location.search).get('data') || 'games_api.json';
 
     async function loadData(){
+      const status = document.getElementById('status');
       try {
+        status.textContent = 'Data: Loading…';
         const res = await fetch(DATA_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
         const json = await res.json();
         if (!json.events) throw new Error("Invalid schema: missing 'events'");
-        data = json;
+        data = json; status.textContent = 'Data: Remote';
       } catch (err){
         console.warn('Failed to fetch data, falling back to embedded sample.', err);
+        status.textContent = 'Data: Sample';
         data = defaultData;
       }
       const first = Object.keys(data.events || {})[0];
