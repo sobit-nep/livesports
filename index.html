@@ -1,386 +1,430 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LiveSports – Streaming Webapp (Vanilla JS)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Sports – Streams & Schedules</title>
+  <meta name="description" content="Beautiful schedule UI that reads a JSON feed of live sports events and lets fans filter, search, and watch." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #0b0c10;
-      --panel: #111318;
-      --panel-2: #171a21;
-      --text: #e9eef5;
-      --muted: #96a0b4;
-      --primary: #6ee7b7;
-      --accent: #60a5fa;
-      --danger: #ef4444;
-      --ring: rgba(110, 231, 183, .3);
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    :root{
+      --bg: #0b0f16;
+      --panel: #101522;
+      --panel-2: #0f1420;
+      --text: #e6ecf2;
+      --muted: #9fb2c3;
+      --brand: #7aa2ff;
+      --brand-2: #5de2a0;
+      --accent: #ffb86b;
+      --danger: #ff6b6b;
+      --ok: #32d583;
+      --ring: 0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent);
       --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
     }
-    * { box-sizing: border-box }
-    html, body { height: 100% }
-    body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-      background: linear-gradient(180deg, var(--bg), #0e1117);
-      color: var(--text);
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 70% -10%, #18306b33, transparent), radial-gradient(800px 500px at -10% 10%, #20a37e22, transparent), var(--bg);
+      color:var(--text);
     }
-    header {
-      position: sticky; top: 0; z-index: 20;
-      backdrop-filter: blur(10px);
-      background: rgba(13, 16, 22, .7);
-      border-bottom: 1px solid rgba(255,255,255,.06);
+    a{color:inherit}
+    .container{max-width:1200px; margin:0 auto; padding:24px}
+
+    header{
+      position: sticky; top:0; z-index:10; backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(11,15,22,.9), rgba(11,15,22,.5));
+      border-bottom:1px solid #ffffff16;
     }
-    .container { max-width: 1120px; margin: 0 auto; padding: 12px 16px }
-    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
-    .brand { display:flex; align-items:center; gap:10px; font-weight:700 }
-    .logo { width: 34px; height: 34px; display:grid; place-items:center; border-radius:12px; background: var(--primary); color:#071315 }
+    .bar{display:flex; gap:14px; align-items:center; justify-content:space-between; padding:14px 24px}
+    .logo{display:flex; gap:12px; align-items:center}
+    .logo .mark{width:34px;height:34px;border-radius:10px; background: linear-gradient(135deg, var(--brand), #5a76ff); box-shadow: var(--shadow); position:relative}
+    .logo .mark:after{content:"";position:absolute; inset:6px; border-radius:8px; background: linear-gradient(135deg, #5de2a0, #4bbf90); mix-blend-mode:screen; opacity:.7}
+    .logo h1{margin:0; font-size:18px; letter-spacing:.5px}
+    .date-tabs{display:flex; gap:8px; flex-wrap:wrap}
+    .tab{border:1px solid #ffffff1f; background: var(--panel); color:var(--text); padding:8px 12px; border-radius:10px; cursor:pointer; transition:.2s; font-weight:600}
+    .tab.active, .tab:hover{border-color: color-mix(in srgb, var(--brand) 40%, transparent); box-shadow: var(--ring)}
 
-    select, input[type="text"], button {
-      background: var(--panel); color: var(--text);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 10px; padding: 10px 12px; height: 40px;
-      outline: none; box-shadow: none; font-size: 14px;
+    /* Controls */
+    .controls{display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:12px; align-items:center; margin:16px 0}
+    .control{position:relative}
+    .control input, .control select{
+      width:100%; height:44px; padding:10px 40px 10px 14px; border-radius:12px; border:1px solid #ffffff24; background:var(--panel-2); color:var(--text);
+      outline:none; transition:.2s; box-shadow:none
     }
-    select:focus, input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--ring) }
-    button { cursor: pointer }
-    .btn { background: var(--panel-2); border-color: rgba(255,255,255,.12) }
-    .btn.primary { background: linear-gradient(180deg, #10b981, #0ea5e9); border: none; color: #071315; font-weight: 700 }
-    .btn.ghost { background: transparent; border-color: rgba(255,255,255,.12) }
+    .control input:focus, .control select:focus{border-color: color-mix(in srgb, var(--brand) 50%, transparent); box-shadow: var(--ring)}
+    .control .label{font-size:12px; color:var(--muted); margin-bottom:6px; display:block}
+    .chip-row{display:flex; gap:8px; flex-wrap:wrap}
+    .chip{padding:6px 10px; border-radius:999px; border:1px solid #ffffff20; background:#ffffff08; font-size:12px; cursor:pointer}
+    .chip.active{background:linear-gradient(135deg, #203256, #15233f); border-color:#4b6cb7}
+    .toggle{display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none}
+    .toggle input{appearance:none;width:40px;height:24px;border-radius:999px;background:#ffffff24;position:relative;outline:none;transition:.2s}
+    .toggle input:checked{background: linear-gradient(90deg, var(--brand), var(--brand-2))}
+    .toggle input:before{content:""; width:18px;height:18px;border-radius:50%; background:#fff; position:absolute; top:3px; left:3px; transition:.2s}
+    .toggle input:checked:before{left:19px}
 
-    .toolbar { gap: 8px }
-    .spacer { flex: 1 1 auto }
+    /* Grid */
+    .grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; align-items:stretch}
+    .card{background: linear-gradient(180deg, #0f1726, #0b111d); border:1px solid #ffffff14; border-radius: var(--radius); padding:16px; box-shadow: var(--shadow); display:flex; flex-direction:column; gap:12px; position:relative; overflow:hidden}
+    .badge{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #ffffff1f; color:#d7e3ff; background:#1a2440; width:max-content}
+    .row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .muted{color:var(--muted)}
+    .title{font-weight:800; font-size:18px}
+    .sub{font-weight:600; color:#b7c8ff}
+    .time{font-variant-numeric: tabular-nums}
+    .countdown{font-weight:700}
+    .channels{display:flex; flex-wrap:wrap; gap:8px}
+    .btn{padding:10px 12px; border-radius:12px; border:1px solid #ffffff24; background:linear-gradient(135deg, #111a2b, #0d1626); color:var(--text); text-decoration:none; display:inline-flex; gap:8px; align-items:center; font-weight:600}
+    .btn:hover{border-color:#4b6cb7}
+    .btn.primary{background: linear-gradient(135deg, var(--brand), #5a76ff); border-color: transparent; color:#07102c}
+    .btn.live{background: linear-gradient(135deg, #ff6b6b, #ff9966); color:#1b0b0b; border-color:transparent}
+    .btn.small{padding:6px 10px; font-size:12px}
 
-    main .container { padding-top: 18px }
+    .kpis{display:grid; grid-template-columns: repeat(4,1fr); gap:12px; margin:16px 0}
+    .kpi{background:linear-gradient(180deg, #0f1726, #0b111d); border:1px solid #ffffff14; border-radius:14px; padding:14px}
+    .kpi .n{font-size:22px; font-weight:800}
+    .kpi .l{font-size:12px; color:var(--muted)}
 
-    .meta { color: var(--muted); font-size: 14px; display:flex; align-items:center; gap:6px; margin: 6px 0 18px }
+    .empty{opacity:.7; border:1px dashed #ffffff30; padding:32px; border-radius:16px; text-align:center}
 
-    .grid { display:grid; grid-template-columns: repeat(1, minmax(0,1fr)); gap: 14px }
-    @media (min-width: 768px){ .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media (min-width: 1200px){ .grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    footer{opacity:.7; padding:40px 0; text-align:center; font-size:13px}
 
-    .card { background: linear-gradient(180deg, var(--panel-2), #0f131a); border: 1px solid rgba(255,255,255,.07); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden }
-    .card-header { padding: 14px 16px 8px }
-    .card-title { display:flex; justify-content: space-between; gap: 12px }
-    .title-left { min-width:0 }
-    .title-line { display:flex; align-items:center; gap:8px; font-weight: 700 }
-    .badge { font-size: 12px; background: rgba(96,165,250,.15); color: var(--accent); padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(96,165,250,.25) }
-    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-    .sub { margin-top: 6px; color: var(--muted); display:flex; flex-wrap: wrap; gap: 8px; font-size: 12px }
-    .pill { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); padding: 4px 8px; border-radius: 999px }
-    .fav { height: 36px; width: 36px; display:grid; place-items:center; border-radius: 10px; border: 1px solid rgba(255,255,255,.12) }
-    .fav.on { background: rgba(110,231,183,.18); border-color: rgba(110,231,183,.5) }
-
-    .card-body { padding: 8px 16px 16px }
-    .channels { display:flex; flex-wrap: wrap; gap: 8px }
-    .chip { font-size: 12px; padding: 8px 10px; background: var(--panel); border: 1px solid rgba(255,255,255,.1); border-radius: 10px }
-    .muted { color: var(--muted) }
-
-    .tabs { margin-top: 12px }
-    .tab-head { display:flex; gap:8px; border-bottom: 1px solid rgba(255,255,255,.08); padding: 0 0 8px 0 }
-    .tab-btn { background: transparent; border: none; color: var(--muted); padding: 8px 2px; border-bottom: 2px solid transparent }
-    .tab-btn.active { color: var(--text); border-color: var(--primary) }
-    .tab-panel { padding-top: 10px }
-    .panel-box { border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px; background: rgba(0,0,0,.2) }
-
-    dialog::backdrop { background: rgba(0,0,0,.6) }
-    dialog { width: min(960px, 96vw); border: 1px solid rgba(255,255,255,.12); background: #000; color: #fff; border-radius: 16px; padding: 0; overflow: hidden }
-    .dialog-head { display:flex; align-items:center; justify-content: space-between; padding: 12px 14px; background: #0b0b0b; border-bottom: 1px solid rgba(255,255,255,.08) }
-    .dialog-body { aspect-ratio: 16/9; background: #000 }
-    .icon { width: 16px; height: 16px; display:inline-block; vertical-align: -2px }
-
-    .empty { text-align: center; color: var(--muted); margin: 60px 0 }
+    @media (max-width: 900px){
+      .controls{grid-template-columns: 1fr 1fr}
+      .kpis{grid-template-columns: repeat(2,1fr)}
+      .hide-sm{display:none}
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="container row">
-      <div class="brand"><div class="logo">LS</div> LiveSports</div>
-
-      <select id="dateSelect"></select>
-      <select id="sportSelect"></select>
-      <input type="text" id="searchInput" placeholder="Search teams, league…" />
-      <button class="btn" id="favToggle">Show All</button>
-
-      <div class="spacer"></div>
-
-      <span class="btn" id="status" title="Data source">Data: Auto</span>
-      <button class="btn" id="exportBtn">Add to Calendar</button>
+    <div class="bar container">
+      <div class="logo">
+        <div class="mark" aria-hidden="true"></div>
+        <h1>Live Sports</h1>
+      </div>
+      <div class="date-tabs" id="dateTabs"></div>
+    </div>
+    <div class="container">
+      <div class="controls" role="region" aria-label="Filters">
+        <div class="control">
+          <span class="label">Search match or team</span>
+          <input id="q" type="search" placeholder="e.g., Lakers, Rangers, NFL..." autocomplete="off" />
+        </div>
+        <div class="control">
+          <span class="label">Sport</span>
+          <select id="sport"><option value="">All sports</option></select>
+        </div>
+        <div class="control">
+          <span class="label">Tournament</span>
+          <select id="tournament"><option value="">All tournaments</option></select>
+        </div>
+        <div class="control">
+          <span class="label">Timezone</span>
+          <select id="tz"></select>
+        </div>
+        <div class="control hide-sm">
+          <span class="label">Quick filters</span>
+          <div class="chip-row" id="quick"></div>
+        </div>
+        <div class="control">
+          <span class="label">Only show</span>
+          <label class="toggle"><input id="liveOnly" type="checkbox" /> <span>Live now</span></label>
+        </div>
+        <div class="control">
+          <span class="label">Sort by</span>
+          <select id="sort">
+            <option value="time">Kickoff (soonest)</option>
+            <option value="sport">Sport</option>
+            <option value="tournament">Tournament</option>
+          </select>
+        </div>
+        <div class="control">
+          <span class="label">Actions</span>
+          <div class="chip-row">
+            <button id="refresh" class="btn small" title="Reload JSON">↻ Refresh</button>
+            <button id="share" class="btn small" title="Copy link with current filters">🔗 Share</button>
+          </div>
+        </div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="n" id="kpiTotal">–</div><div class="l">events</div></div>
+        <div class="kpi"><div class="n" id="kpiLive">–</div><div class="l">live now</div></div>
+        <div class="kpi"><div class="n" id="kpiSports">–</div><div class="l">sports</div></div>
+        <div class="kpi"><div class="n" id="kpiTours">–</div><div class="l">tournaments</div></div>
+      </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="meta" id="meta"></div>
-      <div class="grid" id="grid"></div>
-      <div class="empty" id="empty" style="display:none">No matches found. Try another sport, date, or clear the search.</div>
+  <main class="container">
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <div id="empty" class="empty" hidden>
+      <p>No matches found. Try clearing filters or searching another team.</p>
     </div>
   </main>
 
-  <dialog id="playerModal">
-    <div class="dialog-head">
-      <strong>Live Player</strong>
-      <button class="btn ghost" id="closePlayer">Close</button>
-    </div>
-    <div class="dialog-body">
-      <iframe id="playerFrame" title="Live stream" allow="autoplay; picture-in-picture" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" style="width:100%; height:100%; border:0"></iframe>
-    </div>
-  </dialog>
+  <footer class="container">
+    Built for GitHub Pages • Paste your <code>games_api.json</code> next to this file. Data refreshes on load.
+  </footer>
 
+  <template id="cardTpl">
+    <article class="card" data-sport="" data-tournament="">
+      <div class="row">
+        <span class="badge sport"></span>
+        <span class="badge muted tournament"></span>
+      </div>
+      <div class="title match"></div>
+      <div class="row">
+        <div>
+          <div class="sub time" title="Local time">—</div>
+          <div class="muted countdown">—</div>
+        </div>
+        <div class="chip-row">
+          <a class="btn primary watch" target="_blank" rel="noopener">▶ Watch</a>
+          <a class="btn small cal" target="_blank" rel="noopener" title="Add to Google Calendar">📅</a>
+        </div>
+      </div>
+      <div class="channels"></div>
+    </article>
+  </template>
 
-    // Auto-load external data (same-origin or CORS-enabled). Optional: pass ?data=URL to override.
-    const BASE = (()=>{ const p = location.pathname; return p.endsWith('/') ? p : p.slice(0, p.lastIndexOf('/')+1); })();
-    const DATA_URL = new URLSearchParams(location.search).get('data') || (location.origin + BASE + 'games_api.json');
-
-    async function loadData(){
-      const status = document.getElementById('status');
-      try {
-        status.textContent = 'Data: Loading…';
-        const res = await fetch(DATA_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
-        const json = await res.json();
-        if (!json.events) throw new Error("Invalid schema: missing 'events'");
-        data = json; status.textContent = 'Data: Remote';
-      } catch (err){
-        console.warn('Failed to fetch data, falling back to embedded sample.', err);
-        status.textContent = 'Data: Sample';
-        data = defaultData;
-      }
-      const first = Object.keys(data.events || {})[0];
-      if (first) date = first; else date = '';
-      renderFilters();
-    }
-
-    // -------- State --------
-    let data = null;
-    let query = '';
-    let sport = 'all';
-    let date = '';
-    let onlyFavorites = false;
-
-    const favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+  <script>
+    const API_URL = './games_api.json'; // place the JSON file next to index.html
 
     const els = {
-      dateSelect: document.getElementById('dateSelect'),
-      sportSelect: document.getElementById('sportSelect'),
-      searchInput: document.getElementById('searchInput'),
-      favToggle: document.getElementById('favToggle'),
-      exportBtn: document.getElementById('exportBtn'),
-      meta: document.getElementById('meta'),
+      dateTabs: document.getElementById('dateTabs'),
       grid: document.getElementById('grid'),
       empty: document.getElementById('empty'),
-      playerModal: document.getElementById('playerModal'),
-      playerFrame: document.getElementById('playerFrame'),
-      closePlayer: document.getElementById('closePlayer')
+      q: document.getElementById('q'),
+      sport: document.getElementById('sport'),
+      tournament: document.getElementById('tournament'),
+      liveOnly: document.getElementById('liveOnly'),
+      sort: document.getElementById('sort'),
+      tz: document.getElementById('tz'),
+      quick: document.getElementById('quick'),
+      refresh: document.getElementById('refresh'),
+      share: document.getElementById('share'),
+      kpiTotal: document.getElementById('kpiTotal'),
+      kpiLive: document.getElementById('kpiLive'),
+      kpiSports: document.getElementById('kpiSports'),
+      kpiTours: document.getElementById('kpiTours'),
+      cardTpl: document.getElementById('cardTpl')
     };
 
-    // -------- Utils --------
-    function toArray(d){
-      const out = [];
-      if (!d?.events) return out;
-      for (const day in d.events){
-        for (const e of d.events[day]){
-          out.push({ id: `${day}-${e.sport}-${e.match}-${e.unix_timestamp}`, date: day, ...e });
+    const state = {
+      raw: null,
+      dates: [],
+      activeDate: null,
+      events: [],
+      filtered: [],
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    };
+
+    // --- Utils ---
+    const fmt = (ts, tz) => new Intl.DateTimeFormat(undefined, {
+      timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(ts * 1000));
+
+    const toGCal = (ev, tz) => {
+      const start = new Date(ev.unix_timestamp * 1000);
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2h default
+      const pad = (n) => String(n).padStart(2, '0');
+      const fmtCal = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+      const text = encodeURIComponent(`${ev.match} (${ev.tournament})`);
+      const details = encodeURIComponent(`Watch links: ${ev.channels.join(', ')}`);
+      const location = encodeURIComponent('Online');
+      return `https://www.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${fmtCal(start)}/${fmtCal(end)}&details=${details}&location=${location}&ctz=${encodeURIComponent(tz)}`;
+    };
+
+    const urlParams = () => new URLSearchParams(window.location.search);
+    const setQueryString = (params) => {
+      const qs = new URLSearchParams(params);
+      history.replaceState(null, '', `${location.pathname}?${qs.toString()}`);
+    }
+
+    // Countdown updater
+    function tickCountdowns(){
+      for(const el of document.querySelectorAll('[data-ts]')){
+        const ts = Number(el.getAttribute('data-ts')) * 1000;
+        const diff = ts - Date.now();
+        if(diff <= 0){ el.textContent = 'LIVE'; el.previousElementSibling?.classList?.add('live'); continue; }
+        const h = Math.floor(diff / 3_600_000);
+        const m = Math.floor((diff % 3_600_000) / 60_000);
+        const s = Math.floor((diff % 60_000) / 1000);
+        el.textContent = `${h}h ${m}m ${s}s`;
+      }
+    }
+
+    // Populate timezone select
+    (function fillTZ(){
+      const common = [
+        state.tz,
+        'UTC','America/New_York','America/Chicago','America/Denver','America/Los_Angeles','Europe/London','Europe/Berlin','Europe/Paris','Europe/Madrid','Asia/Tokyo','Asia/Dubai','Australia/Sydney'
+      ];
+      const uniq = [...new Set(common)];
+      els.tz.innerHTML = uniq.map(z => `<option ${z===state.tz?'selected':''}>${z}</option>`).join('');
+    })();
+
+    // Quick filter chips
+    const quickDefs = [
+      {k:'NBA', t:'NBA'},
+      {k:'NFL', t:'NFL'},
+      {k:'NHL', t:'NHL'},
+      {k:'Soccer', t:'Football'},
+    ];
+
+    function renderQuick(){
+      els.quick.innerHTML = quickDefs.map(q => `<button class="chip" data-quick="${q.k}">${q.k}</button>`).join('');
+      els.quick.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
+        const key = b.getAttribute('data-quick');
+        if(key==='Soccer'){ els.sport.value='Football'; } else { els.tournament.value = key; els.sport.value=''; }
+        applyFilters();
+        els.q.value='';
+        els.quick.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        b.classList.add('active');
+      }));
+    }
+
+    // Load data
+    async function load(){
+      const res = await fetch(API_URL, {cache:'no-store'});
+      if(!res.ok) throw new Error('Failed to load games_api.json');
+      const json = await res.json();
+      state.raw = json.events || {};
+      state.dates = Object.keys(state.raw).sort();
+      state.activeDate = urlParams().get('date') || state.dates[0] || null;
+      buildDateTabs();
+      hydrateLists();
+      applyFilters();
+      renderQuick();
+    }
+
+    function buildDateTabs(){
+      els.dateTabs.innerHTML = state.dates.map(d => {
+        const dt = new Date(d + 'T00:00:00Z');
+        const label = dt.toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+        const active = d === state.activeDate ? 'active' : '';
+        return `<button class="tab ${active}" data-date="${d}">${label}</button>`;
+      }).join('');
+
+      els.dateTabs.querySelectorAll('[data-date]').forEach(b => b.addEventListener('click', () => {
+        state.activeDate = b.getAttribute('data-date');
+        setQueryString({date: state.activeDate});
+        els.dateTabs.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        b.classList.add('active');
+        applyFilters();
+      }));
+    }
+
+    function hydrateLists(){
+      const evs = (state.raw[state.activeDate] || []);
+      state.events = evs.map(e => ({...e}));
+      const sports = [...new Set(state.events.map(e=>e.sport))].sort();
+      const tours = [...new Set(state.events.map(e=>e.tournament))].sort();
+      els.sport.innerHTML = '<option value="">All sports</option>' + sports.map(s=>`<option>${s}</option>`).join('');
+      els.tournament.innerHTML = '<option value="">All tournaments</option>' + tours.map(t=>`<option>${t}</option>`).join('');
+      // KPIs
+      els.kpiTotal.textContent = state.events.length;
+      els.kpiSports.textContent = sports.length;
+      els.kpiTours.textContent = tours.length;
+    }
+
+    function applyFilters(){
+      const q = els.q.value.trim().toLowerCase();
+      const sport = els.sport.value;
+      const tour = els.tournament.value;
+      const liveOnly = els.liveOnly.checked;
+      let list = (state.raw[state.activeDate] || []).slice();
+      list = list.filter(ev => {
+        const t = String(ev.match + ' ' + ev.tournament + ' ' + ev.sport).toLowerCase();
+        if(q && !t.includes(q)) return false;
+        if(sport && ev.sport !== sport) return false;
+        if(tour && ev.tournament !== tour) return false;
+        if(liveOnly){
+          const now = Date.now()/1000; // naive live window: -10m .. +3h
+          if(!(ev.unix_timestamp <= now && now <= ev.unix_timestamp + 3*3600)) return false;
         }
-      }
-      return out.sort((a,b)=>a.unix_timestamp - b.unix_timestamp);
-    }
-    function unique(arr){ return [...new Set(arr)]; }
-
-    function fmtKickoff(ts){
-      const dt = new Date(ts * 1000);
-      const dateStr = new Intl.DateTimeFormat('en-US', { weekday:'short', month:'short', day:'numeric', timeZone: TZ }).format(dt);
-      const timeStr = new Intl.DateTimeFormat('en-US', { hour:'numeric', minute:'2-digit', hour12:true, timeZone: TZ }).format(dt);
-      const tz = TZ.split('/')[1] || TZ; // display short tz
-      return `${dateStr} • ${timeStr} ${tz}`;
-    }
-    function timeFromNow(ts){
-      const now = Date.now();
-      const start = ts * 1000;
-      if (start <= now) return 'Live/Ended';
-      const diffMin = Math.round((start - now)/60000);
-      if (diffMin < 60) return `${diffMin}m`;
-      const h = Math.floor(diffMin / 60), m = diffMin % 60; return `${h}h ${m}m`;
+        return true;
+      });
+      const sortBy = els.sort.value;
+      list.sort((a,b)=>{
+        if(sortBy==='time') return a.unix_timestamp - b.unix_timestamp;
+        if(sortBy==='sport') return a.sport.localeCompare(b.sport) || a.unix_timestamp - b.unix_timestamp;
+        if(sortBy==='tournament') return a.tournament.localeCompare(b.tournament) || a.unix_timestamp - b.unix_timestamp;
+        return 0;
+      });
+      state.filtered = list;
+      els.kpiLive.textContent = list.filter(ev=> Date.now()/1000 >= ev.unix_timestamp && Date.now()/1000 <= ev.unix_timestamp + 3*3600).length;
+      render();
     }
 
-    function saveFavs(){ localStorage.setItem(FAV_KEY, JSON.stringify([...favorites])) }
-
-    function decodeLabel(url){
-      try {
-        const clean = decodeURIComponent(url).replace('https://topembed.pw/channel/', '').replace(/\[.*\]/g, '');
-        return clean.length > 22 ? clean.slice(0,22) + '…' : clean;
-      } catch { return 'Channel'; }
-    }
-
-    function openPlayer(url){
-      els.playerFrame.src = url;
-      els.playerModal.showModal();
-    }
-
-    // -------- Rendering --------
-    function renderFilters(){
-      const all = toArray(data);
-      const dates = unique(all.map(e=>e.date));
-      const sports = ['all', ...unique(all.map(e=>e.sport)).sort()]
-
-      // date
-      els.dateSelect.innerHTML = dates.map(d=>`<option value="${d}">${new Date(d).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })}</option>`).join('');
-      if (!dates.includes(date)) date = dates[0];
-      els.dateSelect.value = date;
-
-      // sport
-      els.sportSelect.innerHTML = sports.map(s=>`<option value="${s}">${s}</option>`).join('');
-      els.sportSelect.value = sport;
-
-      // meta
-      const countDay = all.filter(e=>e.date===date).length;
-      const filtered = getFiltered(all);
-      els.meta.textContent = `Showing ${filtered.length} of ${countDay} events on ${new Date(date).toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric', year:'numeric' })} (${TZ})`;
-
-      renderGrid(filtered);
-    }
-
-    function getFiltered(all){
-      return all.filter(e => (
-        e.date === date &&
-        (sport === 'all' || e.sport === sport) &&
-        (!query || `${e.match} ${e.tournament} ${e.sport}`.toLowerCase().includes(query.toLowerCase())) &&
-        (!onlyFavorites || favorites.has(e.id))
-      ));
-    }
-
-    function renderGrid(list){
+    function render(){
+      const list = state.filtered;
       els.grid.innerHTML = '';
-      if (!list.length){ els.empty.style.display = 'block'; return; }
-      els.empty.style.display = 'none';
-
-      for (const e of list){
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="card-header">
-            <div class="card-title">
-              <div class="title-left">
-                <div class="title-line">
-                  <span class="badge">${e.sport}</span>
-                  <span class="truncate" title="${e.match}">${e.match}</span>
-                </div>
-                <div class="sub">
-                  <span class="pill">${e.tournament}</span>
-                  <span>🕒 ${fmtKickoff(e.unix_timestamp)}</span>
-                  <span>Starts in ${timeFromNow(e.unix_timestamp)}</span>
-                </div>
-              </div>
-              <button class="fav ${favorites.has(e.id)?'on':''}" aria-label="Toggle favorite">${favorites.has(e.id)?'★':'☆'}</button>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="channels"></div>
-            ${e.channels && e.channels.length > 4 ? `<div class="muted" style="margin-top:6px">+${e.channels.length - 4} more channels available</div>`:''}
-            <div class="tabs">
-              <div class="tab-head">
-                <button class="tab-btn active" data-tab="channels">Channels</button>
-                <button class="tab-btn" data-tab="details">Details</button>
-              </div>
-              <div class="tab-panel" data-panel="channels">
-                <div class="panel-box muted">Open any source to start watching. Pop-out player supports PiP on most browsers.</div>
-                <div class="channels-all" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px"></div>
-              </div>
-              <div class="tab-panel" data-panel="details" style="display:none">
-                <div class="muted">
-                  <div><strong style="color:var(--text)">Match:</strong> ${e.match}</div>
-                  <div><strong style="color:var(--text)">League:</strong> ${e.tournament}</div>
-                  <div><strong style="color:var(--text)">Kickoff:</strong> ${fmtKickoff(e.unix_timestamp)}</div>
-                  <div><strong style="color:var(--text)">Channels:</strong> ${e.channels?.length || 0}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-
-        // quick channels
-        const chWrap = card.querySelector('.channels');
-        (e.channels||[]).slice(0,4).forEach((url)=>{
-          const btn = document.createElement('button');
-          btn.className = 'chip';
-          btn.textContent = decodeLabel(url);
-          btn.addEventListener('click', ()=> openPlayer(url));
-          chWrap.appendChild(btn);
-        });
-
-        // full tab channels
-        const chAll = card.querySelector('.channels-all');
-        (e.channels||[]).forEach((url, idx)=>{
-          const btn = document.createElement('button');
-          btn.className = 'btn'; btn.style.padding = '8px 10px'; btn.textContent = `Open #${idx+1}`;
-          btn.addEventListener('click', ()=> openPlayer(url));
-          chAll.appendChild(btn);
-        });
-
-        // tabs
-        const tabs = card.querySelectorAll('.tab-btn');
-        tabs.forEach(tb => tb.addEventListener('click', ()=>{
-          tabs.forEach(t=> t.classList.remove('active'));
-          tb.classList.add('active');
-          card.querySelectorAll('.tab-panel').forEach(p => p.style.display = p.dataset.panel === tb.dataset.tab ? 'block' : 'none');
-        }));
-
-        // favorite toggle
-        const favBtn = card.querySelector('.fav');
-        favBtn.addEventListener('click', ()=>{
-          if (favorites.has(e.id)) favorites.delete(e.id); else favorites.add(e.id);
-          saveFavs();
-          renderFilters();
-        });
-
-        els.grid.appendChild(card);
+      els.empty.hidden = list.length !== 0;
+      for(const ev of list){
+        const node = els.cardTpl.content.firstElementChild.cloneNode(true);
+        node.dataset.sport = ev.sport; node.dataset.tournament = ev.tournament;
+        node.querySelector('.sport').textContent = ev.sport;
+        node.querySelector('.tournament').textContent = ev.tournament;
+        node.querySelector('.match').textContent = ev.match;
+        node.querySelector('.time').textContent = fmt(ev.unix_timestamp, els.tz.value || state.tz);
+        const cdown = node.querySelector('.countdown'); cdown.setAttribute('data-ts', ev.unix_timestamp);
+        const watchBtn = node.querySelector('.watch');
+        watchBtn.href = ev.channels[0] || '#';
+        watchBtn.title = 'Open first channel in a new tab';
+        node.querySelector('.cal').href = toGCal(ev, els.tz.value || state.tz);
+        const ch = node.querySelector('.channels');
+        ch.innerHTML = ev.channels.map((u,i)=> `<a class="btn small" target="_blank" rel="noopener" href="${u}">Link ${i+1}</a>`).join('');
+        els.grid.appendChild(node);
       }
+      tickCountdowns();
     }
 
-    // -------- Events --------
-    els.dateSelect.addEventListener('change', (e)=>{ date = e.target.value; renderFilters(); })
-    els.sportSelect.addEventListener('change', (e)=>{ sport = e.target.value; renderFilters(); })
-    els.searchInput.addEventListener('input', (e)=>{ query = e.target.value; renderFilters(); })
+    // Debounced search
+    let t; els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 120); });
+    [els.sport, els.tournament, els.liveOnly, els.sort].forEach(el=> el.addEventListener('change', applyFilters));
+    els.tz.addEventListener('change', ()=>{ applyFilters(); });
 
-    els.favToggle.addEventListener('click', ()=>{
-      onlyFavorites = !onlyFavorites;
-      els.favToggle.textContent = onlyFavorites ? 'Favorites Only' : 'Show All';
-      renderFilters();
-    })
+    els.refresh.addEventListener('click', ()=> load().catch(err => alert(err.message)) );
+    els.share.addEventListener('click', ()=>{
+      const params = new URLSearchParams({
+        date: state.activeDate || '',
+        q: els.q.value || '',
+        sport: els.sport.value || '',
+        tournament: els.tournament.value || '',
+        live: els.liveOnly.checked ? '1' : '',
+        sort: els.sort.value || '',
+        tz: els.tz.value || ''
+      });
+      const link = `${location.origin}${location.pathname}?${params}`;
+      navigator.clipboard.writeText(link).then(()=>{
+        els.share.textContent = '✅ Copied!'; setTimeout(()=> els.share.textContent='🔗 Share', 1200);
+      });
+    });
 
-        function exportICS(){
-      const list = getFiltered(toArray(data));
-      const now = new Date();
-      const lines = [ 'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//LiveSports//EN' ];
-      for (const e of list){
-        const dtstart = new Date(e.unix_timestamp*1000).toISOString().replace(/[-:]/g,'').replace('.000','');
-        const uid = (e.id.replace(/[^a-zA-Z0-9]/g, '')) + '@livesports';
-        lines.push(
-          'BEGIN:VEVENT',
-          'UID:' + uid,
-          'DTSTAMP:' + now.toISOString().replace(/[-:]/g,'').replace('.000',''),
-          'DTSTART:' + dtstart,
-          'SUMMARY:' + e.match + ' (' + e.tournament + ')',
-          'DESCRIPTION:' + 'Watch: ' + (e.channels?.[0] || 'TBA'),
-          'END:VEVENT'
-        );
-      }
-      lines.push('END:VCALENDAR');
-      const blob = new Blob([lines.join('\n')], { type: 'text/calendar' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `LiveSports_${date}.ics`; a.click();
-      URL.revokeObjectURL(url);
+    // Restore from URL on load
+    function restoreFromQS(){
+      const p = urlParams();
+      if(p.get('q')) els.q.value = p.get('q');
+      if(p.get('sport')) els.sport.value = p.get('sport');
+      if(p.get('tournament')) els.tournament.value = p.get('tournament');
+      if(p.get('live')) els.liveOnly.checked = p.get('live')==='1';
+      if(p.get('sort')) els.sort.value = p.get('sort');
+      if(p.get('tz')) els.tz.value = p.get('tz');
     }
-    els.exportBtn.addEventListener('click', exportICS);
 
-    els.closePlayer.addEventListener('click', ()=> els.playerModal.close());
-    els.playerModal.addEventListener('close', ()=> { els.playerFrame.src = '' });
+    // Poll countdowns every second
+    setInterval(tickCountdowns, 1000);
 
-    // live countdown refresh every 30s
-    setInterval(()=>{ renderFilters(); }, 30000);
-
-    // -------- Init --------
-    loadData();
+    restoreFromQS();
+    load().catch(err => {
+      console.error(err);
+      els.grid.innerHTML = `<div class="empty">⚠️ ${err.message}. Make sure <code>games_api.json</code> is present.</div>`;
+    });
   </script>
 </body>
 </html>
