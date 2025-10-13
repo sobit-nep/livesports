@@ -10,16 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg: #0b0f16; --panel: #101522; --panel-2: #0f1420; --text: #e6ecf2; --muted: #9fb2c3;
-      --brand: #7aa2ff; --brand-2: #5de2a0; --accent: #ffb86b; --danger: #ff6b6b; --ok: #32d583;
+      --bg: #0b0f16;
+      --panel: #101522;
+      --panel-2: #0f1420;
+      --text: #e6ecf2;
+      --muted: #9fb2c3;
+      --brand: #7aa2ff;
+      --brand-2: #5de2a0;
+      --accent: #ffb86b;
+      --danger: #ff6b6b;
+      --ok: #32d583;
       --ring: 0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent);
-      --radius: 16px; --shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-    /* Light theme */
-    .light{
-      --bg: #f6f8fb; --panel:#ffffff; --panel-2:#f3f6fb; --text:#0d1220; --muted:#5d6b7c;
-      --brand:#3b82f6; --brand-2:#10b981; --accent:#f59e0b; --danger:#ef4444; --ok:#16a34a;
-      --shadow: 0 6px 18px rgba(0,0,0,.08);
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -94,17 +97,6 @@
       .kpis{grid-template-columns: repeat(2,1fr)}
       .hide-sm{display:none}
     }
-  
-    /* Player modal */
-    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; z-index:50}
-    .modal-backdrop.show{display:flex}
-    .modal{width:min(1100px, 96vw); height:min(70vh, 80vh); background:linear-gradient(180deg,#0f1726,#0b111d); border:1px solid #ffffff24; border-radius:18px; box-shadow: var(--shadow); overflow:hidden; display:flex; flex-direction:column}
-    .modal .top{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #ffffff14}
-    .modal .top .label{font-weight:700}
-    .modal .content{flex:1; background:#000}
-    .modal iframe{width:100%; height:100%; border:0; display:block}
-    .modal .actions{display:flex; gap:8px}
-    .notice{font-size:12px; color:var(--muted)}
   </style>
 </head>
 <body>
@@ -115,7 +107,6 @@
         <h1>Live Sports</h1>
       </div>
       <div class="date-tabs" id="dateTabs"></div>
-      <button id="themeToggle" class="btn small" title="Toggle theme">🌙 Theme</button>
     </div>
     <div class="container">
       <div class="controls" role="region" aria-label="Filters">
@@ -175,26 +166,8 @@
     </div>
   </main>
 
-  <!-- Player Modal (no sandbox) -->
-  <div id="playerModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-label="Stream player">
-    <div class="modal">
-      <div class="top">
-        <div class="label" id="playerLabel">Live Stream</div>
-        <div class="actions">
-          <button id="popout" class="btn small" title="Open stream in a new tab">↗ Pop out</button>
-          <button id="closeModal" class="btn small">✕ Close</button>
-        </div>
-      </div>
-      <div class="content">
-        <!-- Important: no sandbox & referrer unchanged -->
-        <iframe id="playerFrame" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-      </div>
-    </div>
-  </div>
-
   <footer class="container">
-    Built for GitHub Pages • Place <code>games_api.json</code> next to this file.
-    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Do not open embed URLs directly; use the in-page player below.</div>
+    Built for GitHub Pages • Paste your <code>games_api.json</code> next to this file. Data refreshes on load.
   </footer>
 
   <template id="cardTpl">
@@ -210,7 +183,7 @@
           <div class="muted countdown">—</div>
         </div>
         <div class="chip-row">
-          <a class="btn primary watch" href="#">▶ Watch</a>
+          <a class="btn primary watch" target="_blank" rel="noopener">▶ Watch</a>
           <a class="btn small cal" target="_blank" rel="noopener" title="Add to Google Calendar">📅</a>
         </div>
       </div>
@@ -222,23 +195,32 @@
     const API_URL = './games_api.json'; // place the JSON file next to index.html
 
     const els = {
-      dateTabs: document.getElementById('dateTabs'), grid: document.getElementById('grid'), empty: document.getElementById('empty'),
-      q: document.getElementById('q'), sport: document.getElementById('sport'), tournament: document.getElementById('tournament'),
-      liveOnly: document.getElementById('liveOnly'), sort: document.getElementById('sort'), tz: document.getElementById('tz'),
-      quick: document.getElementById('quick'), refresh: document.getElementById('refresh'), share: document.getElementById('share'),
-      kpiTotal: document.getElementById('kpiTotal'), kpiLive: document.getElementById('kpiLive'), kpiSports: document.getElementById('kpiSports'), kpiTours: document.getElementById('kpiTours'),
-      cardTpl: document.getElementById('cardTpl'),
-      // modal
-      modal: document.getElementById('playerModal'), player: document.getElementById('playerFrame'), closeModal: document.getElementById('closeModal'), popout: document.getElementById('popout'), playerLabel: document.getElementById('playerLabel'),
-      // ui
-      themeToggle: document.getElementById('themeToggle')
+      dateTabs: document.getElementById('dateTabs'),
+      grid: document.getElementById('grid'),
+      empty: document.getElementById('empty'),
+      q: document.getElementById('q'),
+      sport: document.getElementById('sport'),
+      tournament: document.getElementById('tournament'),
+      liveOnly: document.getElementById('liveOnly'),
+      sort: document.getElementById('sort'),
+      tz: document.getElementById('tz'),
+      quick: document.getElementById('quick'),
+      refresh: document.getElementById('refresh'),
+      share: document.getElementById('share'),
+      kpiTotal: document.getElementById('kpiTotal'),
+      kpiLive: document.getElementById('kpiLive'),
+      kpiSports: document.getElementById('kpiSports'),
+      kpiTours: document.getElementById('kpiTours'),
+      cardTpl: document.getElementById('cardTpl')
     };
 
     const state = {
-      raw: null, dates: [], activeDate: null, events: [], filtered: [],
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      favorites: new Set(JSON.parse(localStorage.getItem('favorites')||'[]')),
-      notify: JSON.parse(localStorage.getItem('notify')||'false')
+      raw: null,
+      dates: [],
+      activeDate: null,
+      events: [],
+      filtered: [],
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
     };
 
     // --- Utils ---
@@ -288,25 +270,16 @@
 
     // Quick filter chips
     const quickDefs = [
-      {k:'NBA', t:'NBA'}, {k:'NFL', t:'NFL'}, {k:'NHL', t:'NHL'}, {k:'Soccer', t:'Football'}, {k:'Favorites', t:'fav'}
+      {k:'NBA', t:'NBA'},
+      {k:'NFL', t:'NFL'},
+      {k:'NHL', t:'NHL'},
+      {k:'Soccer', t:'Football'},
     ];
 
     function renderQuick(){
       els.quick.innerHTML = quickDefs.map(q => `<button class="chip" data-quick="${q.k}">${q.k}</button>`).join('');
       els.quick.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
         const key = b.getAttribute('data-quick');
-        if(key==='Soccer'){ els.sport.value='Football'; els.tournament.value=''; }
-        else if(key==='Favorites'){ els.sport.value=''; els.tournament.value=''; els.q.value=''; els.liveOnly.checked=false; setQueryString({date: state.activeDate}); renderFavoritesOnly(); }
-        else { els.tournament.value = key; els.sport.value=''; }
-        if(key!=='Favorites'){ applyFilters(); }
-        els.q.value='';
-        els.quick.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-        b.classList.add('active');
-      }));
-    function renderFavoritesOnly(){
-      const evs = (state.raw[state.activeDate]||[]).filter(e => state.favorites.has(makeId(e)));
-      state.filtered = evs; render();
-    }
         if(key==='Soccer'){ els.sport.value='Football'; } else { els.tournament.value = key; els.sport.value=''; }
         applyFilters();
         els.q.value='';
@@ -393,7 +366,6 @@
       els.grid.innerHTML = '';
       els.empty.hidden = list.length !== 0;
       for(const ev of list){
-        const id = makeId(ev);
         const node = els.cardTpl.content.firstElementChild.cloneNode(true);
         node.dataset.sport = ev.sport; node.dataset.tournament = ev.tournament;
         node.querySelector('.sport').textContent = ev.sport;
@@ -402,17 +374,11 @@
         node.querySelector('.time').textContent = fmt(ev.unix_timestamp, els.tz.value || state.tz);
         const cdown = node.querySelector('.countdown'); cdown.setAttribute('data-ts', ev.unix_timestamp);
         const watchBtn = node.querySelector('.watch');
-        watchBtn.addEventListener('click', (e)=>{ e.preventDefault(); openPlayer(ev.channels[0], ev.match); });
+        watchBtn.href = ev.channels[0] || '#';
+        watchBtn.title = 'Open first channel in a new tab';
         node.querySelector('.cal').href = toGCal(ev, els.tz.value || state.tz);
-        // fav + notify controls
-        const chRow = node.querySelector('.channels');
-        const fav = document.createElement('button'); fav.className='btn small fav'; fav.dataset.id = id; fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite';
-        fav.addEventListener('click', (e)=>{ e.preventDefault(); toggleFav(id); fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite'; });
-        const bell = document.createElement('button'); bell.className='btn small'; bell.textContent='🔔 Notify'; bell.title='Remind me 5 min before kickoff (while this tab is open)';
-        bell.addEventListener('click', (e)=>{ e.preventDefault(); scheduleReminder(ev); bell.textContent='✅ Scheduled'; setTimeout(()=> bell.textContent='🔔 Notify', 1500); });
-        chRow.prepend(bell); chRow.prepend(fav);
         const ch = node.querySelector('.channels');
-        ch.innerHTML = ev.channels.map((u,i)=> `<a class=\"btn small ch\" href=\"#\" data-url=\"${u}\">Link ${i+1}</a>`).join('');
+        ch.innerHTML = ev.channels.map((u,i)=> `<a class="btn small" target="_blank" rel="noopener" href="${u}">Link ${i+1}</a>`).join('');
         els.grid.appendChild(node);
       }
       tickCountdowns();
@@ -422,40 +388,8 @@
     let t; els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 120); });
     [els.sport, els.tournament, els.liveOnly, els.sort].forEach(el=> el.addEventListener('change', applyFilters));
     els.tz.addEventListener('change', ()=>{ applyFilters(); });
-    // Theme toggle
-// Theme toggle
-els.themeToggle.addEventListener('click', ()=>{
-  document.documentElement.classList.toggle('light');
-  localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
-});
-
 
     els.refresh.addEventListener('click', ()=> load().catch(err => alert(err.message)) );
-    els.share.addEventListener('click', ()=>{
-      const params = new URLSearchParams({
-        date: state.activeDate || '',
-        q: els.q.value || '',
-        sport: els.sport.value || '',
-        tournament: els.tournament.value || '',
-        live: els.liveOnly.checked ? '1' : '',
-        sort: els.sort.value || '',
-        tz: els.tz.value || ''
-      });
-      const link = `${location.origin}${location.pathname}?${params}`;
-      navigator.clipboard.writeText(link).then(()=>{
-        els.share.textContent = '✅ Copied!'; setTimeout(()=> els.share.textContent='🔗 Share', 1200);
-      });
-    });
-
-    // Grid delegate for channel buttons
-    els.grid.addEventListener('click', (e)=>{
-      const a = e.target.closest('a.ch');
-      if(!a) return;
-      e.preventDefault();
-      const url = a.getAttribute('data-url');
-      const title = a.closest('.card').querySelector('.match')?.textContent || 'Live Stream';
-      openPlayer(url, title);
-    });
     els.share.addEventListener('click', ()=>{
       const params = new URLSearchParams({
         date: state.activeDate || '',
@@ -485,47 +419,6 @@ els.themeToggle.addEventListener('click', ()=>{
 
     // Poll countdowns every second
     setInterval(tickCountdowns, 1000);
-    // Auto-refresh data every 2 minutes (useful on match days)
-    setInterval(()=>{ if(state.activeDate){ load().catch(()=>{}); } }, 120000);
-
-    // Player controls (no sandbox; keep default referrer)
-    function openPlayer(url, title='Live Stream'){
-      if(!url) return;
-      els.player.src = url; // embeds only – do not open directly
-      els.playerLabel.textContent = title;
-      els.modal.classList.add('show');
-      els.modal.setAttribute('aria-hidden','false');
-      document.body.style.overflow='hidden';
-      els.popout.onclick = () => { window.open(url, '_blank'); };
-    }
-    function closePlayer(){
-      els.modal.classList.remove('show');
-      els.modal.setAttribute('aria-hidden','true');
-      document.body.style.overflow='';
-      els.player.src = '';
-    }
-    els.closeModal.addEventListener('click', closePlayer);
-    els.modal.addEventListener('click', (e)=>{ if(e.target === els.modal) closePlayer(); });
-    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && els.modal.classList.contains('show')) closePlayer(); });
-
-    // helpers for ids & storage
-    const makeId = (ev) => ev.id || `${ev.match}|${ev.unix_timestamp}`;
-    function toggleFav(id){
-      if(state.favorites.has(id)) state.favorites.delete(id); else state.favorites.add(id);
-      localStorage.setItem('favorites', JSON.stringify([...state.favorites]));
-    }
-    function scheduleReminder(ev){
-      const show = () => {
-        try{ new Notification(`${ev.match} starting`, { body: `${ev.tournament} • in 5 minutes`, tag: makeId(ev) }); }catch(_){}
-      };
-      const ms = (ev.unix_timestamp*1000) - Date.now() - 5*60*1000;
-      if(ms <= 0) { show(); return; }
-      if(Notification && Notification.permission !== 'granted'){
-        Notification.requestPermission().then(p=>{ if(p==='granted') setTimeout(show, ms); });
-      } else { setTimeout(show, ms); }
-    }
-    // Restore theme
-    if(localStorage.getItem('theme')==='light') document.documentElement.classList.add('light');
 
     restoreFromQS();
     load().catch(err => {
