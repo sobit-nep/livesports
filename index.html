@@ -97,6 +97,17 @@
       .kpis{grid-template-columns: repeat(2,1fr)}
       .hide-sm{display:none}
     }
+  
+    /* Player modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; z-index:50}
+    .modal-backdrop.show{display:flex}
+    .modal{width:min(1100px, 96vw); height:min(70vh, 80vh); background:linear-gradient(180deg,#0f1726,#0b111d); border:1px solid #ffffff24; border-radius:18px; box-shadow: var(--shadow); overflow:hidden; display:flex; flex-direction:column}
+    .modal .top{display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #ffffff14}
+    .modal .top .label{font-weight:700}
+    .modal .content{flex:1; background:#000}
+    .modal iframe{width:100%; height:100%; border:0; display:block}
+    .modal .actions{display:flex; gap:8px}
+    .notice{font-size:12px; color:var(--muted)}
   </style>
 </head>
 <body>
@@ -166,8 +177,26 @@
     </div>
   </main>
 
+  <!-- Player Modal (no sandbox) -->
+  <div id="playerModal" class="modal-backdrop" aria-hidden="true" role="dialog" aria-label="Stream player">
+    <div class="modal">
+      <div class="top">
+        <div class="label" id="playerLabel">Live Stream</div>
+        <div class="actions">
+          <button id="popout" class="btn small" title="Open stream in a new tab">↗ Pop out</button>
+          <button id="closeModal" class="btn small">✕ Close</button>
+        </div>
+      </div>
+      <div class="content">
+        <!-- Important: no sandbox & referrer unchanged -->
+        <iframe id="playerFrame" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+    </div>
+  </div>
+
   <footer class="container">
-   Try Desktop site on if you're on mobile.
+  
+    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Try desktop site on, if you're on mobile.</div>
   </footer>
 
   <template id="cardTpl">
@@ -183,7 +212,7 @@
           <div class="muted countdown">—</div>
         </div>
         <div class="chip-row">
-          <a class="btn primary watch" target="_blank" rel="noopener">▶ Watch</a>
+          <a class="btn primary watch" href="#">▶ Watch</a>
           <a class="btn small cal" target="_blank" rel="noopener" title="Add to Google Calendar">📅</a>
         </div>
       </div>
@@ -211,7 +240,13 @@
       kpiLive: document.getElementById('kpiLive'),
       kpiSports: document.getElementById('kpiSports'),
       kpiTours: document.getElementById('kpiTours'),
-      cardTpl: document.getElementById('cardTpl')
+      cardTpl: document.getElementById('cardTpl'),
+      // modal
+      modal: document.getElementById('playerModal'),
+      player: document.getElementById('playerFrame'),
+      closeModal: document.getElementById('closeModal'),
+      popout: document.getElementById('popout'),
+      playerLabel: document.getElementById('playerLabel')
     };
 
     const state = {
@@ -374,11 +409,10 @@
         node.querySelector('.time').textContent = fmt(ev.unix_timestamp, els.tz.value || state.tz);
         const cdown = node.querySelector('.countdown'); cdown.setAttribute('data-ts', ev.unix_timestamp);
         const watchBtn = node.querySelector('.watch');
-        watchBtn.href = ev.channels[0] || '#';
-        watchBtn.title = 'Open first channel in a new tab';
+        watchBtn.addEventListener('click', (e)=>{ e.preventDefault(); openPlayer(ev.channels[0], ev.match); });
         node.querySelector('.cal').href = toGCal(ev, els.tz.value || state.tz);
         const ch = node.querySelector('.channels');
-        ch.innerHTML = ev.channels.map((u,i)=> `<a class="btn small" target="_blank" rel="noopener" href="${u}">Link ${i+1}</a>`).join('');
+        ch.innerHTML = ev.channels.map((u,i)=> `<a class=\"btn small ch\" href=\"#\" data-url=\"${u}\">Link ${i+1}</a>`).join('');
         els.grid.appendChild(node);
       }
       tickCountdowns();
@@ -390,6 +424,31 @@
     els.tz.addEventListener('change', ()=>{ applyFilters(); });
 
     els.refresh.addEventListener('click', ()=> load().catch(err => alert(err.message)) );
+    els.share.addEventListener('click', ()=>{
+      const params = new URLSearchParams({
+        date: state.activeDate || '',
+        q: els.q.value || '',
+        sport: els.sport.value || '',
+        tournament: els.tournament.value || '',
+        live: els.liveOnly.checked ? '1' : '',
+        sort: els.sort.value || '',
+        tz: els.tz.value || ''
+      });
+      const link = `${location.origin}${location.pathname}?${params}`;
+      navigator.clipboard.writeText(link).then(()=>{
+        els.share.textContent = '✅ Copied!'; setTimeout(()=> els.share.textContent='🔗 Share', 1200);
+      });
+    });
+
+    // Grid delegate for channel buttons
+    els.grid.addEventListener('click', (e)=>{
+      const a = e.target.closest('a.ch');
+      if(!a) return;
+      e.preventDefault();
+      const url = a.getAttribute('data-url');
+      const title = a.closest('.card').querySelector('.match')?.textContent || 'Live Stream';
+      openPlayer(url, title);
+    });
     els.share.addEventListener('click', ()=>{
       const params = new URLSearchParams({
         date: state.activeDate || '',
@@ -419,6 +478,26 @@
 
     // Poll countdowns every second
     setInterval(tickCountdowns, 1000);
+
+    // Player controls (no sandbox; keep default referrer)
+    function openPlayer(url, title='Live Stream'){
+      if(!url) return;
+      els.player.src = url; // embeds only – do not open directly
+      els.playerLabel.textContent = title;
+      els.modal.classList.add('show');
+      els.modal.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      els.popout.onclick = () => { window.open(url, '_blank'); };
+    }
+    function closePlayer(){
+      els.modal.classList.remove('show');
+      els.modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      els.player.src = '';
+    }
+    els.closeModal.addEventListener('click', closePlayer);
+    els.modal.addEventListener('click', (e)=>{ if(e.target === els.modal) closePlayer(); });
+    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && els.modal.classList.contains('show')) closePlayer(); });
 
     restoreFromQS();
     load().catch(err => {
