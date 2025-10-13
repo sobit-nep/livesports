@@ -423,10 +423,12 @@
     [els.sport, els.tournament, els.liveOnly, els.sort].forEach(el=> el.addEventListener('change', applyFilters));
     els.tz.addEventListener('change', ()=>{ applyFilters(); });
     // Theme toggle
-    els.themeToggle.addEventListener('click', ()=>{
-      document.documentElement.classList.toggle('light');
-      localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
-    });('change', ()=>{ applyFilters(); });
+// Theme toggle
+els.themeToggle.addEventListener('click', ()=>{
+  document.documentElement.classList.toggle('light');
+  localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+});
+
 
     els.refresh.addEventListener('click', ()=> load().catch(err => alert(err.message)) );
     els.share.addEventListener('click', ()=>{
