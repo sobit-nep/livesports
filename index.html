@@ -10,19 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg: #0b0f16;
-      --panel: #101522;
-      --panel-2: #0f1420;
-      --text: #e6ecf2;
-      --muted: #9fb2c3;
-      --brand: #7aa2ff;
-      --brand-2: #5de2a0;
-      --accent: #ffb86b;
-      --danger: #ff6b6b;
-      --ok: #32d583;
+      --bg: #0b0f16; --panel: #101522; --panel-2: #0f1420; --text: #e6ecf2; --muted: #9fb2c3;
+      --brand: #7aa2ff; --brand-2: #5de2a0; --accent: #ffb86b; --danger: #ff6b6b; --ok: #32d583;
       --ring: 0 0 0 2px color-mix(in srgb, var(--brand) 35%, transparent);
-      --radius: 16px;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px; --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    /* Light theme */
+    .light{
+      --bg: #f6f8fb; --panel:#ffffff; --panel-2:#f3f6fb; --text:#0d1220; --muted:#5d6b7c;
+      --brand:#3b82f6; --brand-2:#10b981; --accent:#f59e0b; --danger:#ef4444; --ok:#16a34a;
+      --shadow: 0 6px 18px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -118,6 +115,7 @@
         <h1>Live Sports</h1>
       </div>
       <div class="date-tabs" id="dateTabs"></div>
+      <button id="themeToggle" class="btn small" title="Toggle theme">🌙 Theme</button>
     </div>
     <div class="container">
       <div class="controls" role="region" aria-label="Filters">
@@ -154,11 +152,22 @@
           </select>
         </div>
         <div class="control">
+          <span class="label">View</span>
+          <select id="view">
+            <option value="grid">Grid</option>
+            <option value="timeline">Now / Next / Later</option>
+            <option value="leagues">By tournament</option>
+          </select>
+        </div>
+        <div class="control">
           <span class="label">Actions</span>
           <div class="chip-row">
             <button id="refresh" class="btn small" title="Reload JSON">↻ Refresh</button>
             <button id="share" class="btn small" title="Copy link with current filters">🔗 Share</button>
+            <button id="dlIcsFiltered" class="btn small" title="Download .ics for current list">📥 .ics (filtered)</button>
+            <button id="dlIcsFav" class="btn small" title="Download .ics for favorites">⭐ .ics (favorites)</button>
           </div>
+        </div>
         </div>
       </div>
       <div class="kpis">
@@ -195,8 +204,8 @@
   </div>
 
   <footer class="container">
-    Built for GitHub Pages • Place <code>games_api.json</code> next to this file.
-    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Do not open embed URLs directly; use the in-page player below.</div>
+    
+    <div class="notice" style="margin-top:8px">Note: Streams are <strong>embeds only</strong>. Change to desktop site, if you're watching from mobile.</div>
   </footer>
 
   <template id="cardTpl">
@@ -224,38 +233,27 @@
     const API_URL = './games_api.json'; // place the JSON file next to index.html
 
     const els = {
-      dateTabs: document.getElementById('dateTabs'),
-      grid: document.getElementById('grid'),
-      empty: document.getElementById('empty'),
-      q: document.getElementById('q'),
-      sport: document.getElementById('sport'),
-      tournament: document.getElementById('tournament'),
-      liveOnly: document.getElementById('liveOnly'),
-      sort: document.getElementById('sort'),
-      tz: document.getElementById('tz'),
-      quick: document.getElementById('quick'),
-      refresh: document.getElementById('refresh'),
-      share: document.getElementById('share'),
-      kpiTotal: document.getElementById('kpiTotal'),
-      kpiLive: document.getElementById('kpiLive'),
-      kpiSports: document.getElementById('kpiSports'),
-      kpiTours: document.getElementById('kpiTours'),
+      dateTabs: document.getElementById('dateTabs'), grid: document.getElementById('grid'), empty: document.getElementById('empty'),
+      q: document.getElementById('q'), sport: document.getElementById('sport'), tournament: document.getElementById('tournament'),
+      liveOnly: document.getElementById('liveOnly'), sort: document.getElementById('sort'), tz: document.getElementById('tz'),
+      quick: document.getElementById('quick'), refresh: document.getElementById('refresh'), share: document.getElementById('share'),
+      kpiTotal: document.getElementById('kpiTotal'), kpiLive: document.getElementById('kpiLive'), kpiSports: document.getElementById('kpiSports'), kpiTours: document.getElementById('kpiTours'),
       cardTpl: document.getElementById('cardTpl'),
       // modal
-      modal: document.getElementById('playerModal'),
-      player: document.getElementById('playerFrame'),
-      closeModal: document.getElementById('closeModal'),
-      popout: document.getElementById('popout'),
-      playerLabel: document.getElementById('playerLabel')
+      modal: document.getElementById('playerModal'), player: document.getElementById('playerFrame'), closeModal: document.getElementById('closeModal'), popout: document.getElementById('popout'), playerLabel: document.getElementById('playerLabel'),
+      // ui
+      themeToggle: document.getElementById('themeToggle'),
+      view: document.getElementById('view'),
+      dlIcsFiltered: document.getElementById('dlIcsFiltered'),
+      dlIcsFav: document.getElementById('dlIcsFav')
     };
 
     const state = {
-      raw: null,
-      dates: [],
-      activeDate: null,
-      events: [],
-      filtered: [],
-      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      raw: null, dates: [], activeDate: null, events: [], filtered: [],
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      favorites: new Set(JSON.parse(localStorage.getItem('favorites')||'[]')),
+      notify: JSON.parse(localStorage.getItem('notify')||'false'),
+      view: localStorage.getItem('view') || 'grid'
     };
 
     // --- Utils ---
@@ -305,16 +303,25 @@
 
     // Quick filter chips
     const quickDefs = [
-      {k:'NBA', t:'NBA'},
-      {k:'NFL', t:'NFL'},
-      {k:'NHL', t:'NHL'},
-      {k:'Soccer', t:'Football'},
+      {k:'NBA', t:'NBA'}, {k:'NFL', t:'NFL'}, {k:'NHL', t:'NHL'}, {k:'Soccer', t:'Football'}, {k:'Favorites', t:'fav'}
     ];
 
     function renderQuick(){
       els.quick.innerHTML = quickDefs.map(q => `<button class="chip" data-quick="${q.k}">${q.k}</button>`).join('');
       els.quick.querySelectorAll('[data-quick]').forEach(b => b.addEventListener('click', () => {
         const key = b.getAttribute('data-quick');
+        if(key==='Soccer'){ els.sport.value='Football'; els.tournament.value=''; }
+        else if(key==='Favorites'){ els.sport.value=''; els.tournament.value=''; els.q.value=''; els.liveOnly.checked=false; setQueryString({date: state.activeDate}); renderFavoritesOnly(); }
+        else { els.tournament.value = key; els.sport.value=''; }
+        if(key!=='Favorites'){ applyFilters(); }
+        els.q.value='';
+        els.quick.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+        b.classList.add('active');
+      }));
+    function renderFavoritesOnly(){
+      const evs = (state.raw[state.activeDate]||[]).filter(e => state.favorites.has(makeId(e)));
+      state.filtered = evs; render();
+    }
         if(key==='Soccer'){ els.sport.value='Football'; } else { els.tournament.value = key; els.sport.value=''; }
         applyFilters();
         els.q.value='';
@@ -379,7 +386,7 @@
         if(sport && ev.sport !== sport) return false;
         if(tour && ev.tournament !== tour) return false;
         if(liveOnly){
-          const now = Date.now()/1000; // naive live window: -10m .. +3h
+          const now = Date.now()/1000; // live: kickoff..+3h
           if(!(ev.unix_timestamp <= now && now <= ev.unix_timestamp + 3*3600)) return false;
         }
         return true;
@@ -397,10 +404,18 @@
     }
 
     function render(){
+      const mode = state.view;
+      if(mode==='timeline') return renderTimeline();
+      if(mode==='leagues') return renderByLeague();
+      return renderGrid();
+    }
+
+    function renderGrid(){
       const list = state.filtered;
       els.grid.innerHTML = '';
       els.empty.hidden = list.length !== 0;
       for(const ev of list){
+        const id = makeId(ev);
         const node = els.cardTpl.content.firstElementChild.cloneNode(true);
         node.dataset.sport = ev.sport; node.dataset.tournament = ev.tournament;
         node.querySelector('.sport').textContent = ev.sport;
@@ -413,15 +428,45 @@
         node.querySelector('.cal').href = toGCal(ev, els.tz.value || state.tz);
         const ch = node.querySelector('.channels');
         ch.innerHTML = ev.channels.map((u,i)=> `<a class=\"btn small ch\" href=\"#\" data-url=\"${u}\">Link ${i+1}</a>`).join('');
+        // fav + notify
+        const chRow = ch;
+        const fav = document.createElement('button'); fav.className='btn small fav'; fav.dataset.id = id; fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite';
+        fav.addEventListener('click', (e)=>{ e.preventDefault(); toggleFav(id); fav.textContent = state.favorites.has(id) ? '⭐ Favorited' : '☆ Favorite'; });
+        const bell = document.createElement('button'); bell.className='btn small'; bell.textContent='🔔 Notify'; bell.title='Remind me 5 min before kickoff (while this tab is open)';
+        bell.addEventListener('click', (e)=>{ e.preventDefault(); scheduleReminder(ev); bell.textContent='✅ Scheduled'; setTimeout(()=> bell.textContent='🔔 Notify', 1500); });
+        chRow.prepend(bell); chRow.prepend(fav);
         els.grid.appendChild(node);
       }
       tickCountdowns();
     }
 
+    function renderTimeline(){
+      const now = Date.now()/1000;
+      const list = state.filtered;
+      const buckets = { now: [], next: [], later: [] };
+      for(const ev of list){
+        if(ev.unix_timestamp <= now && now <= ev.unix_timestamp + 3*3600) buckets.now.push(ev);
+        else if(ev.unix_timestamp > now && ev.unix_timestamp <= now + 2*3600) buckets.next.push(ev);
+        else buckets.later.push(ev);
+      }
+      const sections = [
+        ['NOW', buckets.now], ['NEXT (≤ 2h)', buckets.next], ['LATER', buckets.later]
+      ];
+      els.grid.innerHTML = sections.map(([label, arr])=>{
+        if(arr.length===0) return '';
+        const items = arr.map(ev=>{
+          const when = fmt(ev.unix_timestamp, els.tz.value || state.tz);
+          return `<div class=\"card\"><div class=\"row\"><span class=\"badge sport\">${ev.sport}</span><span class=\"badge muted\">${e
+
     // Debounced search
     let t; els.q.addEventListener('input', ()=>{ clearTimeout(t); t=setTimeout(applyFilters, 120); });
     [els.sport, els.tournament, els.liveOnly, els.sort].forEach(el=> el.addEventListener('change', applyFilters));
     els.tz.addEventListener('change', ()=>{ applyFilters(); });
+    // Theme toggle
+    els.themeToggle.addEventListener('click', ()=>{
+      document.documentElement.classList.toggle('light');
+      localStorage.setItem('theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+    });('change', ()=>{ applyFilters(); });
 
     els.refresh.addEventListener('click', ()=> load().catch(err => alert(err.message)) );
     els.share.addEventListener('click', ()=>{
@@ -478,6 +523,8 @@
 
     // Poll countdowns every second
     setInterval(tickCountdowns, 1000);
+    // Auto-refresh data every 2 minutes (useful on match days)
+    setInterval(()=>{ if(state.activeDate){ load().catch(()=>{}); } }, 120000);
 
     // Player controls (no sandbox; keep default referrer)
     function openPlayer(url, title='Live Stream'){
@@ -498,6 +545,25 @@
     els.closeModal.addEventListener('click', closePlayer);
     els.modal.addEventListener('click', (e)=>{ if(e.target === els.modal) closePlayer(); });
     window.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && els.modal.classList.contains('show')) closePlayer(); });
+
+    // helpers for ids & storage
+    const makeId = (ev) => ev.id || `${ev.match}|${ev.unix_timestamp}`;
+    function toggleFav(id){
+      if(state.favorites.has(id)) state.favorites.delete(id); else state.favorites.add(id);
+      localStorage.setItem('favorites', JSON.stringify([...state.favorites]));
+    }
+    function scheduleReminder(ev){
+      const show = () => {
+        try{ new Notification(`${ev.match} starting`, { body: `${ev.tournament} • in 5 minutes`, tag: makeId(ev) }); }catch(_){}
+      };
+      const ms = (ev.unix_timestamp*1000) - Date.now() - 5*60*1000;
+      if(ms <= 0) { show(); return; }
+      if(Notification && Notification.permission !== 'granted'){
+        Notification.requestPermission().then(p=>{ if(p==='granted') setTimeout(show, ms); });
+      } else { setTimeout(show, ms); }
+    }
+    // Restore theme
+    if(localStorage.getItem('theme')==='light') document.documentElement.classList.add('light');
 
     restoreFromQS();
     load().catch(err => {
